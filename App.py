@@ -12,6 +12,8 @@ import json
 import random 
 import hashlib # Added for password hashing
 import os # Added to check if users file exists
+from streamlit_extras.calculator import st_calculator # Added for calculator
+from streamlit_extras.calendar import st_calendar # Added for calendar
 
 # --- SET PAGE CONFIG FIRST ---
 st.set_page_config(page_title="AI Study Pal", layout="wide")
@@ -163,11 +165,12 @@ def parse_quiz_from_file(uploaded_file, num_questions=3):
              st.error("No valid questions were found in the file. Please check the format.")
              return []
         
+        # This is where the quiz is randomized
         if len(quiz_bank) < num_questions:
             st.warning(f"File only contains {len(quiz_bank)} questions. Using all of them.")
-            return quiz_bank
+            return random.sample(quiz_bank, len(quiz_bank)) # Return all
         
-        return random.sample(quiz_bank, num_questions)
+        return random.sample(quiz_bank, num_questions) # Return random sample
 
     except Exception as e:
         st.error(f"An error occurred while processing the file: {e}")
@@ -250,12 +253,11 @@ def show_main_app():
     """Displays the main application after login."""
     
     # --- Sidebar ---
-    st.sidebar.title("Project Overview")
-    st.sidebar.info(
-        "This is an interactive Streamlit app for the 'AI Study Pal' capstone project. "
-        "Upload your own quiz file to get started."
-    )
+    st.sidebar.title("AI Study Pal")
+    st.sidebar.info("Upload a quiz file and enter a subject to start.")
 
+    st.sidebar.header(f"Welcome, {st.session_state.username}!")
+    
     st.sidebar.header("Your Progress (This Session)")
     if st.session_state.quiz_scores:
         progress_df = pd.DataFrame({'Quiz': range(1, len(st.session_state.quiz_scores) + 1), 'Score (%)': st.session_state.quiz_scores})
@@ -266,9 +268,32 @@ def show_main_app():
             st.rerun()
     else:
         st.sidebar.info("Submit your first quiz to see your progress!")
+    
+    # --- NEW: Tools Section ---
+    st.sidebar.header("Tools")
+    with st.sidebar.expander("Calculator"):
+        st_calculator() # Adds the calculator
 
-    with st.sidebar.expander("About Leaderboards & Persistent Tracking"):
-        st.write("A true leaderboard or persistent progress tracking would require a user database (like Firebase or Supabase) to store data permanently.")
+    with st.sidebar.expander("Calendar"):
+        st_calendar() # Adds the calendar
+
+    # --- NEW: Mock Leaderboard ---
+    st.sidebar.header("Global Leaderboard (Demo)")
+    st.sidebar.write("A real leaderboard requires a cloud database.")
+    mock_leaderboard_data = {
+        'User': ['Student_A', 'Pro_Learner', 'TestUser'],
+        'Top Score': [100, 80, 75]
+    }
+    st.sidebar.dataframe(pd.DataFrame(mock_leaderboard_data))
+    with st.sidebar.expander("Why is this a demo?"):
+        st.write("""
+            Streamlit Community Cloud has an **ephemeral filesystem**,
+            meaning any file saved (like your `users.json` file)
+            is erased every time the app restarts.
+            
+            To build a real, persistent leaderboard, you must connect this
+            app to an external cloud database (like Firebase, Supabase, or NeonDB).
+        """)
     
     # Add a logout button to the sidebar
     if st.sidebar.button("Logout"):
@@ -283,7 +308,7 @@ def show_main_app():
 
     # --- Main App Interface ---
     st.title("🤖 AI Study Pal")
-    st.write(f"Welcome, **{st.session_state.username}**!") # Greet the logged-in user
+    st.write(f"Ready to study, **{st.session_state.username}**? Let's get started.")
 
     # --- Input Form ---
     with st.form(key="study_form"):
@@ -347,7 +372,8 @@ A: Paris
             st.session_state.user_answers = {}
             st.session_state.current_subject = subject_input_text.split(',')[0].strip()
             
-            st.session_state.current_quiz = parse_quiz_from_file(uploaded_file, num_questions=3)
+            # Parse the file. We set num_questions to 5 for a better quiz.
+            st.session_state.current_quiz = parse_quiz_from_file(uploaded_file, num_questions=5)
             
             if not st.session_state.current_quiz:
                 st.error(f"Could not generate quiz from the uploaded file. Please check its format.")
