@@ -3,4 +3,5 @@ pandas
 matplotlib
 nltk
 scikit-learn
-streamlit-extras
+streamlit-calculator
+streamlit-calendar
