@@ -12,8 +12,7 @@ import json
 import random 
 import hashlib # Added for password hashing
 import os # Added to check if users file exists
-from streamlit_extras.calculator import st_calculator # Added for calculator
-from streamlit_extras.calendar import st_calendar # Added for calendar
+# Removed streamlit_extras imports
 
 # --- SET PAGE CONFIG FIRST ---
 st.set_page_config(page_title="AI Study Pal", layout="wide")
@@ -165,7 +164,6 @@ def parse_quiz_from_file(uploaded_file, num_questions=3):
              st.error("No valid questions were found in the file. Please check the format.")
              return []
         
-        # This is where the quiz is randomized
         if len(quiz_bank) < num_questions:
             st.warning(f"File only contains {len(quiz_bank)} questions. Using all of them.")
             return random.sample(quiz_bank, len(quiz_bank)) # Return all
@@ -269,15 +267,11 @@ def show_main_app():
     else:
         st.sidebar.info("Submit your first quiz to see your progress!")
     
-    # --- NEW: Tools Section ---
-    st.sidebar.header("Tools")
-    with st.sidebar.expander("Calculator"):
-        st_calculator() # Adds the calculator
+    # --- REMOVED Tools Section ---
+    # The calculator and calendar code has been removed
+    # to prevent the app from crashing.
 
-    with st.sidebar.expander("Calendar"):
-        st_calendar() # Adds the calendar
-
-    # --- NEW: Mock Leaderboard ---
+    # --- Mock Leaderboard ---
     st.sidebar.header("Global Leaderboard (Demo)")
     st.sidebar.write("A real leaderboard requires a cloud database.")
     mock_leaderboard_data = {
