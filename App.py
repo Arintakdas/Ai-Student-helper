@@ -10,46 +10,56 @@ import io
 import csv
 import json 
 import random 
-import hashlib 
-import os 
+import hashlib # Added for password hashing
+import os # Added to check if users file exists
+# Removed streamlit_extras imports
 
+# --- SET PAGE CONFIG FIRST ---
 st.set_page_config(page_title="AI Study Pal", layout="wide")
 
+# --- USER AUTHENTICATION & DATABASE ---
 USERS_FILE = 'users.json'
 
 def hash_password(password):
+    """Hashes a password using SHA-256."""
     return hashlib.sha256(password.encode()).hexdigest()
 
 def check_password(hashed_password, plain_password):
+    """Checks if the plain password matches the hashed password."""
     return hashed_password == hash_password(plain_password)
 
 def load_users():
+    """Loads the user database from the JSON file."""
     if not os.path.exists(USERS_FILE):
         with open(USERS_FILE, 'w') as f:
-            json.dump({}, f) 
+            json.dump({}, f) # Create an empty file if it doesn't exist
         return {}
     
     try:
         with open(USERS_FILE, 'r') as f:
             return json.load(f)
     except json.JSONDecodeError:
-        return {} 
+        return {} # Return empty dict if file is corrupt or empty
 
 def save_users(users):
+    """Saves the user database to the JSON file."""
     with open(USERS_FILE, 'w') as f:
         json.dump(users, f, indent=4)
 
+# --- 1. NLTK Data Download (Cached) ---
 @st.cache_resource
 def download_nltk_data():
+    """Downloads required NLTK data packages."""
     try:
         nltk.download('punkt')
         nltk.download('stopwords')
-        nltk.download('punkt_tab') 
+        nltk.download('punkt_tab') # For some environments
         return True
     except Exception as e:
         st.error(f"Error downloading NLTK data: {e}")
         return False
 
+# --- 2. Session State Initialization ---
 def init_session_state():
     defaults = {
         'quiz_scores': [],
@@ -59,11 +69,11 @@ def init_session_state():
         'plan_generated': False,
         'schedule_df': pd.DataFrame(),
         'csv_string': "",
-        'summary': "", 
-        'subjects_list': [], 
-        'first_subject': "", 
-        'text_input_for_tips': "", 
-        'authentication_status': None, 
+        'summary': "", # Summary is static from the text box
+        'subjects_list': [], # List of all subjects
+        'first_subject': "", # For the quiz
+        'text_input_for_tips': "", # To regenerate tips
+        'authentication_status': None, # None, 'pending_signup', 'logged_in'
         'username': None
     }
     for key, value in defaults.items():
@@ -72,11 +82,16 @@ def init_session_state():
 
 init_session_state()
 
+# --- 3. Model & Data Loading (Cached) ---
 @st.cache_resource
 def load_models_and_data():
+    """Loads placeholder data and trains ML models."""
     return "model1", "model2", "model3"
 
+# --- 4. Backend Helper Functions ---
+
 def get_resource_suggestions(subject):
+    """Placeholder for resource suggestion system."""
     subject_lower = subject.lower()
     if 'math' in subject_lower or 'calculus' in subject_lower:
         return 'https://www.khanacademy.org/math'
@@ -86,19 +101,25 @@ def get_resource_suggestions(subject):
         return 'https://www.khanacademy.org/humanities/world-history'
     if 'english' in subject_lower or 'grammar' in subject_lower:
         return 'https://www.khanacademy.org/humanities/grammar'
+    # Default fallback
     return f'https://www.khanacademy.org/search?page_search_query={subject.replace(" ", "+")}'
 
 @st.cache_data(show_spinner="Parsing quiz file(s)...")
 def parse_quiz_from_file(uploaded_files, num_questions=3):
-    quiz_bank = [] 
+    """
+    Parses uploaded JSON, CSV, or TXT files and randomly selects questions.
+    'uploaded_files' is now a LIST.
+    """
+    quiz_bank = [] # Master list for all questions
     
-    if not uploaded_files: 
+    if not uploaded_files: # Check if list is empty
         return []
 
-    for uploaded_file in uploaded_files: 
+    for uploaded_file in uploaded_files: # Loop through the list of files
         try:
             if uploaded_file.name.endswith('.json'):
                 uploaded_file.seek(0)
+                # Use .extend() to add all questions from this file
                 quiz_bank.extend(json.load(uploaded_file))
                 
             elif uploaded_file.name.endswith('.csv'):
@@ -145,15 +166,18 @@ def parse_quiz_from_file(uploaded_files, num_questions=3):
         except Exception as e:
             st.error(f"An error occurred while processing {uploaded_file.name}: {e}")
 
+    # --- End of loop ---
+
     if not quiz_bank:
          st.error("No valid questions were found in the uploaded file(s). Please check format.")
          return []
     
+    # Now, randomly sample from the combined bank of all files
     if len(quiz_bank) < num_questions:
         st.warning(f"Found {len(quiz_bank)} total questions. Using all of them.")
-        return random.sample(quiz_bank, len(quiz_bank)) 
+        return random.sample(quiz_bank, len(quiz_bank)) # Return all
     
-    return random.sample(quiz_bank, num_questions) 
+    return random.sample(quiz_bank, num_questions) # Return random sample
 
 
 def generate_summary(text):
@@ -186,6 +210,7 @@ def show_login_page():
     
     col1, col2 = st.columns(2)
     
+    # --- LOGIN FORM ---
     with col1:
         with st.form(key="login_form"):
             st.header("Login")
@@ -202,6 +227,7 @@ def show_login_page():
                 else:
                     st.error("Incorrect username or password")
     
+    # --- SIGNUP FORM ---
     with col2:
         with st.form(key="signup_form"):
             st.header("Sign Up")
@@ -398,6 +424,7 @@ A: Paris
                             "Select your answer:",
                             options=item['options'],
                             key=question_key, 
+                            index=None, # <-- THIS IS THE FIX
                             label_visibility="collapsed"
                         )
                     
